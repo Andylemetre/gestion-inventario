@@ -1,0 +1,115 @@
+/* Aplicar la familia de fuentes Poppins a todo el documento */
+* {
+    font-family: 'Poppins', sans-serif;
+}
+
+/* Fondo global de la página: degradado y altura mínima para cubrir la ventana */
+body {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    min-height: 100vh;
+}
+
+/* Sombra y efecto hover para tarjetas (reutilizable en secciones) */
+.card-shadow {
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.15);
+    transition: all 0.3s ease;
+}
+
+/* Al pasar el ratón eleva ligeramente la tarjeta y aumenta la sombra */
+.card-shadow:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 15px 40px rgba(0, 0, 0, 0.2);
+}
+
+/* Estilo base para campos de entrada: fondo claro y borde sutil */
+.input-field {
+    background-color: #f8f9fa;
+    border: 2px solid #e9ecef;
+    transition: all 0.3s ease;
+}
+
+/* Cuando el campo está enfocado: fondo blanco y borde con color primario */
+.input-field:focus {
+    background-color: white;
+    border-color: #838797;
+    outline: none;
+}
+
+/* Botón principal con degradado (clase reusable) */
+.btn-primary {
+    background: linear-gradient(135deg, #3c5ef3 0%, #764ba2 100%);
+    transition: all 0.3s ease;
+}
+
+/* Efecto hover en el botón: ligera elevación y sombra */
+.btn-primary:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 10px 25px rgba(102, 126, 234, 0.4);
+}
+
+/* Estilo base para botones de pestañas: transición y borde inferior transparente */
+.tab-btn {
+    transition: all 0.3s ease;
+    border-bottom: 3px solid transparent;
+}
+
+/* Pestaña activa: resaltar con color del tema y mostrar línea inferior */
+.tab-btn.active {
+    border-bottom-color: #253169;
+    color: #263575;
+}
+
+/* Resaltar filas con bajo stock: fondo rojizo y borde izquierdo rojo */
+.low-stock {
+    background-color: #fff5f5;
+    border-left: 4px solid #f56565;
+}
+
+/* Estilo base para cada fila de tabla: separador y transición */
+.table-row {
+    border-bottom: 1px solid #e9ecef;
+    transition: all 0.3s ease;
+}
+
+/* Hover en fila de tabla: fondo más claro para indicar foco visual */
+.table-row:hover {
+    background-color: #f8f9fa;
+}
+
+/* Etiqueta/badge genérica: padding, radio y peso de fuente */
+.badge {
+    display: inline-block;
+    padding: 0.4rem 0.8rem;
+    border-radius: 20px;
+    font-size: 0.85rem;
+    font-weight: 600;
+}
+
+/* Badge para entradas: fondo verde claro y texto verde oscuro */
+.badge-entrada {
+    background-color: #d4edda;
+    color: #155724;
+}
+
+/* Badge para salidas: fondo rojo claro y texto rojo oscuro */
+.badge-salida {
+    background-color: #f8d7da;
+    color: #721c24;
+}
+
+/* Tarjeta de ubicación: cursor pointer y transición para interacción */
+.location-card {
+    cursor: pointer;
+    transition: all 0.3s ease;
+}
+
+/* Hover en tarjeta de ubicación: ligera ampliación */
+.location-card:hover {
+    transform: scale(1.05);
+}
+
+/* Tarjeta de ubicación seleccionada: borde y halo con color del tema */
+.location-card.selected {
+    border: 3px solid #667eea;
+    box-shadow: 0 0 20px rgba(102, 126, 234, 0.5);
+}

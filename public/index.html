@@ -1,0 +1,272 @@
+<!DOCTYPE html>
+<html lang="es">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Gestión de Inventario - Cocina</title>
+    <!-- Tailwind para utilidades CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Tipografía Poppins -->
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;600;700&display=swap" rel="stylesheet">
+    <!-- Iconos Font Awesome -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Estilos personalizados -->
+    <link rel="stylesheet" href="/css/styles.css">
+</head>
+
+<body class="min-h-screen">
+    <!-- Encabezado de la página con un fondo degradado y título -->
+    <header class="bg-gradient-to-r from-indigo-600 to-purple-700 text-white p-6 shadow-lg">
+        <div class="container mx-auto">
+            <h1 class="text-4xl font-bold flex items-center gap-3">
+                <i class="fas fa-utensils"></i> Gestión de Cocina
+            </h1>
+            <p class="text-indigo-200 mt-2">Sistema completo de inventario y herramientas</p>
+        </div>
+    </header>
+
+    <main class="container mx-auto p-6 max-w-7xl">
+        <!-- Tabs de navegación para cambiar entre insumos, herramientas y historial -->
+        <div class="flex gap-4 mb-8 border-b-2 border-white bg-white bg-opacity-10 rounded-lg p-4 backdrop-blur">
+            <button class="tab-btn active text-white font-semibold px-6 py-2" onclick="switchTab('insumos')">
+                <i class="fas fa-boxes mr-2"></i>Insumos
+            </button>
+            <button class="tab-btn text-white font-semibold px-6 py-2" onclick="switchTab('herramientas')">
+                <i class="fas fa-tools mr-2"></i>Herramientas
+            </button>
+            <!-- Botón para cambiar a la pestaña de historial -->
+            <button class="tab-btn text-white font-semibold px-6 py-2" onclick="switchTab('historial')">
+                <i class="fas fa-history mr-2"></i>Historial
+            </button>
+        </div>
+
+        <!-- Contenedor principal de la pestaña de insumos -->
+        <div id="tab-insumos" class="tab-content">
+            <!-- Sección para agregar nuevos insumos -->
+            <section class="bg-white p-8 rounded-xl card-shadow mb-8">
+                <!-- Título de la sección -->
+                <h2 class="text-2xl font-bold mb-6 flex items-center gap-2">
+                    <i class="fas fa-plus-circle text-indigo-600"></i>Añadir Nuevo Insumo
+                </h2>
+                <!-- Formulario para agregar nuevos insumos -->
+                <form id="inventory-form" class="grid grid-cols-1 md:grid-cols-5 gap-4">
+                    <!-- Campo de texto para el nombre del insumo -->
+                    <input type="text" id="item-name" placeholder="Nombre del insumo"
+                        class="input-field p-3 rounded-lg">
+                    <!-- Campo numérico para la cantidad -->
+                    <input type="number" id="item-quantity" placeholder="Cantidad" class="input-field p-3 rounded-lg"
+                        min="0" step="0.01">
+                    <!-- Selector desplegable para la unidad de medida -->
+                    <select id="item-unit" class="input-field p-3 rounded-lg">
+                        <option value="">Unidad de medida</option>
+                        <option value="unid">Unidades</option>
+                        <option value="kg">Kilogramos</option>
+                        <option value="lt">Litros</option>
+                        <option value="gr">Gramos</option>
+                    </select>
+                    <!-- Campo numérico para el stock mínimo -->
+                    <input type="number" id="item-min" placeholder="Stock mínimo" class="input-field p-3 rounded-lg"
+                        min="0" step="0.01">
+                    <!-- Botón para enviar el formulario -->
+                    <button type="submit" class="btn-primary text-white p-3 rounded-lg font-semibold">
+                        <i class="fas fa-check mr-2"></i>Añadir
+                    </button>
+                </form>
+            </section>
+
+            <!-- Tabla que muestra el inventario actual de insumos -->
+            <section class="bg-white p-8 rounded-xl card-shadow">
+                <h2 class="text-2xl font-bold mb-6 flex items-center gap-2">
+                    <i class="fas fa-warehouse text-indigo-600"></i>Inventario Actual
+                </h2>
+                <div class="overflow-x-auto">
+                    <table class="w-full">
+                        <thead>
+                            <tr class="bg-gradient-to-r from-indigo-50 to-purple-50">
+                                <th class="p-4 text-left font-semibold text-gray-700">Insumo</th>
+                                <th class="p-4 text-left font-semibold text-gray-700">Cantidad</th>
+                                <th class="p-4 text-left font-semibold text-gray-700">Unidad</th>
+                                <th class="p-4 text-left font-semibold text-gray-700">Mínimo</th>
+                                <th class="p-4 text-left font-semibold text-gray-700">Estado</th>
+                                <th class="p-4 text-center font-semibold text-gray-700">Acciones</th>
+                            </tr>
+                        </thead>
+                        <tbody id="inventory-table"></tbody>
+                    </table>
+                </div>
+            </section>
+
+            <!-- Formulario para registrar movimientos de insumos -->
+            <section class="bg-white p-8 rounded-xl card-shadow mt-8">
+                <h2 class="text-2xl font-bold mb-6 flex items-center gap-2">
+                    <i class="fas fa-exchange-alt text-indigo-600"></i>Registrar Movimiento de Insumo
+                </h2>
+                <form id="movement-form" class="grid grid-cols-1 md:grid-cols-5 gap-4">
+                    <select id="movement-item" class="input-field p-3 rounded-lg"></select>
+                    <select id="movement-type" class="input-field p-3 rounded-lg">
+                        <option value="entrada">Entrada</option>
+                        <option value="salida">Salida</option>
+                    </select>
+                    <input type="number" id="movement-quantity" placeholder="Cantidad"
+                        class="input-field p-3 rounded-lg" min="0" step="0.01">
+                    <input type="text" id="movement-reason" placeholder="Motivo" class="input-field p-3 rounded-lg">
+                    <button type="submit" class="btn-primary text-white p-3 rounded-lg font-semibold">
+                        <i class="fas fa-arrow-right mr-2"></i>Registrar
+                    </button>
+                </form>
+            </section>
+        </div>
+
+        <!-- TAB: HERRAMIENTAS -->
+        <div id="tab-herramientas" class="tab-content hidden">
+            <!-- Formulario para añadir nuevas herramientas -->
+            <section class="bg-white p-8 rounded-xl card-shadow mb-8">
+                <h2 class="text-2xl font-bold mb-6 flex items-center gap-2">
+                    <i class="fas fa-plus-circle text-indigo-600"></i>Añadir Nueva Herramienta
+                </h2>
+                <form id="tools-form" class="grid grid-cols-1 md:grid-cols-5 gap-4">
+                    <input type="text" id="tool-name" placeholder="Nombre de la herramienta"
+                        class="input-field p-3 rounded-lg">
+                    <input type="number" id="tool-quantity" placeholder="Cantidad" class="input-field p-3 rounded-lg"
+                        min="0">
+                    <select id="tool-category" class="input-field p-3 rounded-lg">
+                        <option value="">Categoría</option>
+                        <option value="cubiertos">Cubiertos</option>
+                        <option value="utensilios">Utensilios</option>
+                        <option value="ollas">Ollas y Sartenes</option>
+                        <option value="otros">Otros</option>
+                    </select>
+                    <select id="tool-location" class="input-field p-3 rounded-lg">
+                        <option value="">Ubicación</option>
+                        <option value="bodega">Bodega</option>
+                        <option value="taller">Taller</option>
+                        <option value="pañol">Pañol</option>
+                    </select>
+                    <button type="submit" class="btn-primary text-white p-3 rounded-lg font-semibold">
+                        <i class="fas fa-check mr-2"></i>Añadir
+                    </button>
+                </form>
+            </section>
+
+            <!-- Sección para filtrar herramientas por ubicación -->
+            <section class="bg-white p-8 rounded-xl card-shadow mb-8">
+                <h2 class="text-2xl font-bold mb-6 flex items-center gap-2">
+                    <i class="fas fa-map-marker-alt text-indigo-600"></i>Filtrar por Ubicación
+                </h2>
+                <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
+                    <div class="location-card bg-gradient-to-br from-blue-50 to-blue-100 p-6 rounded-xl text-center selected"
+                        onclick="filterByLocation('todas')">
+                        <i class="fas fa-globe text-4xl text-blue-600 mb-3"></i>
+                        <h3 class="font-bold text-lg text-gray-800">Todas</h3>
+                        <p class="text-sm text-gray-600 mt-2">Ver todo el inventario</p>
+                        <p class="text-2xl font-bold text-blue-600 mt-2" id="count-todas">0</p>
+                    </div>
+                    <div class="location-card bg-gradient-to-br from-green-50 to-green-100 p-6 rounded-xl text-center"
+                        onclick="filterByLocation('bodega')">
+                        <i class="fas fa-warehouse text-4xl text-green-600 mb-3"></i>
+                        <h3 class="font-bold text-lg text-gray-800">Bodega</h3>
+                        <p class="text-sm text-gray-600 mt-2">Almacenamiento principal</p>
+                        <p class="text-2xl font-bold text-green-600 mt-2" id="count-bodega">0</p>
+                    </div>
+                    <div class="location-card bg-gradient-to-br from-orange-50 to-orange-100 p-6 rounded-xl text-center"
+                        onclick="filterByLocation('taller')">
+                        <i class="fas fa-tools text-4xl text-orange-600 mb-3"></i>
+                        <h3 class="font-bold text-lg text-gray-800">Taller</h3>
+                        <p class="text-sm text-gray-600 mt-2">Área de trabajo</p>
+                        <p class="text-2xl font-bold text-orange-600 mt-2" id="count-taller">0</p>
+                    </div>
+                    <div class="location-card bg-gradient-to-br from-purple-50 to-purple-100 p-6 rounded-xl text-center"
+                        onclick="filterByLocation('pañol')">
+                        <i class="fas fa-box text-4xl text-purple-600 mb-3"></i>
+                        <h3 class="font-bold text-lg text-gray-800">Pañol</h3>
+                        <p class="text-sm text-gray-600 mt-2">Almacén de equipos</p>
+                        <p class="text-2xl font-bold text-purple-600 mt-2" id="count-pañol">0</p>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Tabla que muestra las herramientas disponibles -->
+            <section class="bg-white p-8 rounded-xl card-shadow">
+                <h2 class="text-2xl font-bold mb-6 flex items-center gap-2">
+                    <i class="fas fa-wrench text-indigo-600"></i>Herramientas Disponibles
+                    <span id="location-filter-text" class="text-lg font-normal text-gray-600"></span>
+                </h2>
+                <div class="overflow-x-auto">
+                    <table class="w-full">
+                        <thead>
+                            <tr class="bg-gradient-to-r from-indigo-50 to-purple-50">
+                                <th class="p-4 text-left font-semibold text-gray-700">Herramienta</th>
+                                <th class="p-4 text-left font-semibold text-gray-700">Cantidad</th>
+                                <th class="p-4 text-left font-semibold text-gray-700">Categoría</th>
+                                <th class="p-4 text-left font-semibold text-gray-700">Ubicación</th>
+                                <th class="p-4 text-left font-semibold text-gray-700">Estado</th>
+                                <th class="p-4 text-center font-semibold text-gray-700">Acciones</th>
+                            </tr>
+                        </thead>
+                        <tbody id="tools-table"></tbody>
+                    </table>
+                </div>
+            </section>
+
+            <!-- Formulario para registrar movimientos de herramientas -->
+            <section class="bg-white p-8 rounded-xl card-shadow mt-8">
+                <h2 class="text-2xl font-bold mb-6 flex items-center gap-2">
+                    <i class="fas fa-exchange-alt text-indigo-600"></i>Registrar Movimiento de Herramienta
+                </h2>
+                <form id="tool-movement-form" class="grid grid-cols-1 md:grid-cols-5 gap-4">
+                    <select id="tool-movement-item" class="input-field p-3 rounded-lg"></select>
+                    <select id="tool-movement-type" class="input-field p-3 rounded-lg">
+                        <option value="entrada">Entrada</option>
+                        <option value="salida">Salida</option>
+                    </select>
+                    <input type="number" id="tool-movement-quantity" placeholder="Cantidad"
+                        class="input-field p-3 rounded-lg" min="0">
+                    <input type="text" id="tool-movement-reason" placeholder="Motivo"
+                        class="input-field p-3 rounded-lg">
+                    <button type="submit" class="btn-primary text-white p-3 rounded-lg font-semibold">
+                        <i class="fas fa-arrow-right mr-2"></i>Registrar
+                    </button>
+                </form>
+            </section>
+        </div>
+
+        <!-- TAB: HISTORIAL -->
+        <div id="tab-historial" class="tab-content hidden">
+            <!-- Sección que muestra el historial de movimientos -->
+            <section class="bg-white p-8 rounded-xl card-shadow">
+                <h2 class="text-2xl font-bold mb-6 flex items-center gap-2">
+                    <i class="fas fa-history text-indigo-600"></i>Historial de Movimientos
+                </h2>
+                <div class="mb-4 flex gap-2">
+                    <button onclick="filterMovements('todos')"
+                        class="px-4 py-2 rounded-lg bg-indigo-100 text-indigo-600 font-semibold">Todos</button>
+                    <button onclick="filterMovements('insumo')"
+                        class="px-4 py-2 rounded-lg bg-gray-100 text-gray-600 font-semibold hover:bg-indigo-100 hover:text-indigo-600">Insumos</button>
+                    <button onclick="filterMovements('herramienta')"
+                        class="px-4 py-2 rounded-lg bg-gray-100 text-gray-600 font-semibold hover:bg-indigo-100 hover:text-indigo-600">Herramientas</button>
+                </div>
+                <div class="overflow-x-auto">
+                    <table class="w-full">
+                        <thead>
+                            <tr class="bg-gradient-to-r from-indigo-50 to-purple-50">
+                                <th class="p-4 text-left font-semibold text-gray-700">Fecha</th>
+                                <th class="p-4 text-left font-semibold text-gray-700">Tipo</th>
+                                <th class="p-4 text-left font-semibold text-gray-700">Elemento</th>
+                                <th class="p-4 text-left font-semibold text-gray-700">Movimiento</th>
+                                <th class="p-4 text-left font-semibold text-gray-700">Cantidad</th>
+                                <th class="p-4 text-left font-semibold text-gray-700">Motivo</th>
+                            </tr>
+                        </thead>
+                        <tbody id="movement-table"></tbody>
+                    </table>
+                </div>
+            </section>
+        </div>
+    </main>
+
+    <!-- JavaScript principal -->
+    <script src="/js/main.js"></script>
+</body>
+
+</html>
