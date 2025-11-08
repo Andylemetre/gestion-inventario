@@ -44,7 +44,7 @@ body {
 /* Efecto hover en el botón: ligera elevación y sombra */
 .btn-primary:hover {
     transform: translateY(-2px);
-    box-shadow: 0 10px 25px rgba(102, 126, 234, 0.4);
+    box-shadow: 0 10px 25px rgba(102, 126, 234, 1.4);
 }
 
 /* Estilo base para botones de pestañas: transición y borde inferior transparente */

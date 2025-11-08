@@ -29,14 +29,14 @@
     <main class="container mx-auto p-6 max-w-7xl">
         <!-- Tabs de navegación para cambiar entre insumos, herramientas y historial -->
         <div class="flex gap-4 mb-8 border-b-2 border-white bg-white bg-opacity-10 rounded-lg p-4 backdrop-blur">
-            <button class="tab-btn active text-white font-semibold px-6 py-2" onclick="switchTab('insumos')">
+            <button class="tab-btn active text-white font-semibold px-0,1 py-2" onclick="switchTab('insumos')">
                 <i class="fas fa-boxes mr-2"></i>Insumos
             </button>
-            <button class="tab-btn text-white font-semibold px-6 py-2" onclick="switchTab('herramientas')">
+            <button class="tab-btn text-white font-semibold px-0,1 py-2" onclick="switchTab('herramientas')">
                 <i class="fas fa-tools mr-2"></i>Herramientas
             </button>
             <!-- Botón para cambiar a la pestaña de historial -->
-            <button class="tab-btn text-white font-semibold px-6 py-2" onclick="switchTab('historial')">
+            <button class="tab-btn text-white font-semibold px-0,1 py-2" onclick="switchTab('historial')">
                 <i class="fas fa-history mr-2"></i>Historial
             </button>
         </div>
@@ -240,11 +240,11 @@
                 </h2>
                 <div class="mb-4 flex gap-2">
                     <button onclick="filterMovements('todos')"
-                        class="px-4 py-2 rounded-lg bg-indigo-100 text-indigo-600 font-semibold">Todos</button>
+                        class="px-0,1 py-2 rounded-lg bg-indigo-100 text-indigo-600 font-semibold">Todos</button>
                     <button onclick="filterMovements('insumo')"
-                        class="px-4 py-2 rounded-lg bg-gray-100 text-gray-600 font-semibold hover:bg-indigo-100 hover:text-indigo-600">Insumos</button>
+                        class="px-0,1 py-2 rounded-lg bg-gray-100 text-gray-600 font-semibold hover:bg-indigo-100 hover:text-indigo-600">Insumos</button>
                     <button onclick="filterMovements('herramienta')"
-                        class="px-4 py-2 rounded-lg bg-gray-100 text-gray-600 font-semibold hover:bg-indigo-100 hover:text-indigo-600">Herramientas</button>
+                        class="px-0,1 py-2 rounded-lg bg-gray-100 text-gray-600 font-semibold hover:bg-indigo-100 hover:text-indigo-600">Herramientas</button>
                 </div>
                 <div class="overflow-x-auto">
                     <table class="w-full">
