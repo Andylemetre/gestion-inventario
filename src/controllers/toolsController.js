@@ -1,154 +1,206 @@
-const db = require('../config/database');
+const Tool = require('../models/Tool');
+const Movement = require('../models/Movement');
 
 // Obtener todas las herramientas
-exports.getAllTools = async (req, res) => {
+exports.getAll = async (req, res) => {
     try {
-        const { ubicacion } = req.query;
-        let query = 'SELECT * FROM herramientas';
-        let params = [];
-
-        if (ubicacion && ubicacion !== 'todas') {
-            query += ' WHERE ubicacion = ?';
-            params.push(ubicacion);
-        }
-
-        query += ' ORDER BY nombre';
-
-        const [rows] = await db.query(query, params);
-        res.json({ success: true, data: rows });
+        const tools = await Tool.find().sort({ nombre: 1 });
+        res.json({
+            success: true,
+            data: tools
+        });
     } catch (error) {
-        console.error('Error al obtener herramientas:', error);
-        res.status(500).json({ success: false, message: 'Error al obtener herramientas' });
+        res.status(500).json({
+            success: false,
+            message: 'Error al obtener las herramientas',
+            error: error.message
+        });
     }
 };
 
-// Obtener herramienta por ID
-exports.getToolById = async (req, res) => {
+// Obtener una herramienta por ID
+exports.getById = async (req, res) => {
     try {
-        const [rows] = await db.query('SELECT * FROM herramientas WHERE id = ?', [req.params.id]);
-        if (rows.length === 0) {
-            return res.status(404).json({ success: false, message: 'Herramienta no encontrada' });
-        }
-        res.json({ success: true, data: rows[0] });
-    } catch (error) {
-        console.error('Error al obtener herramienta:', error);
-        res.status(500).json({ success: false, message: 'Error al obtener herramienta' });
-    }
-};
+        const tool = await Tool.findById(req.params.id);
 
-// Crear o actualizar herramienta
-exports.createOrUpdateTool = async (req, res) => {
-    try {
-        const { nombre, cantidad, categoria, ubicacion } = req.body;
-
-        if (!nombre || cantidad === undefined || !categoria || !ubicacion) {
-            return res.status(400).json({
+        if (!tool) {
+            return res.status(404).json({
                 success: false,
-                message: 'Todos los campos son requeridos'
+                message: 'Herramienta no encontrada'
             });
         }
 
-        // Verificar si ya existe
-        const [existing] = await db.query('SELECT id FROM herramientas WHERE nombre = ?', [nombre]);
-
-        if (existing.length > 0) {
-            // Actualizar
-            await db.query(
-                'UPDATE herramientas SET cantidad = ?, categoria = ?, ubicacion = ? WHERE nombre = ?',
-                [cantidad, categoria, ubicacion, nombre]
-            );
-            res.json({ success: true, message: 'Herramienta actualizada correctamente', id: existing[0].id });
-        } else {
-            // Crear nueva
-            const [result] = await db.query(
-                'INSERT INTO herramientas (nombre, cantidad, categoria, ubicacion) VALUES (?, ?, ?, ?)',
-                [nombre, cantidad, categoria, ubicacion]
-            );
-            res.status(201).json({ success: true, message: 'Herramienta creada correctamente', id: result.insertId });
-        }
+        res.json({
+            success: true,
+            data: tool
+        });
     } catch (error) {
-        console.error('Error al crear/actualizar herramienta:', error);
-        res.status(500).json({ success: false, message: 'Error al crear/actualizar herramienta' });
+        res.status(500).json({
+            success: false,
+            message: 'Error al obtener la herramienta',
+            error: error.message
+        });
     }
 };
 
-// Actualizar cantidad de herramienta
-exports.updateToolQuantity = async (req, res) => {
+// Crear nueva herramienta
+exports.create = async (req, res) => {
     try {
-        const { nombre, cantidad, tipo } = req.body;
+        const newTool = new Tool(req.body);
+        const savedTool = await newTool.save();
 
-        if (!nombre || cantidad === undefined || !tipo) {
-            return res.status(400).json({
+        // Registrar movimiento
+        await Movement.create({
+            tipo_item: 'herramienta',
+            item_id: savedTool._id,
+            tipo_item_ref: 'Tool',
+            nombre_item: savedTool.nombre,
+            tipo_movimiento: 'entrada',
+            cantidad: savedTool.cantidad,
+            cantidad_anterior: 0,
+            cantidad_nueva: savedTool.cantidad,
+            motivo: 'Creación inicial',
+            usuario: 'Sistema'
+        });
+
+        res.status(201).json({
+            success: true,
+            message: 'Herramienta creada exitosamente',
+            data: savedTool
+        });
+    } catch (error) {
+        res.status(400).json({
+            success: false,
+            message: 'Error al crear la herramienta',
+            error: error.message
+        });
+    }
+};
+
+// Actualizar herramienta
+exports.update = async (req, res) => {
+    try {
+        const tool = await Tool.findById(req.params.id);
+
+        if (!tool) {
+            return res.status(404).json({
                 success: false,
-                message: 'Nombre, cantidad y tipo son requeridos'
+                message: 'Herramienta no encontrada'
             });
         }
 
-        const [rows] = await db.query('SELECT cantidad FROM herramientas WHERE nombre = ?', [nombre]);
+        const cantidadAnterior = tool.cantidad;
+        const updatedTool = await Tool.findByIdAndUpdate(
+            req.params.id,
+            req.body,
+            { new: true, runValidators: true }
+        );
 
-        if (rows.length === 0) {
-            return res.status(404).json({ success: false, message: 'Herramienta no encontrada' });
+        // Si cambió la cantidad, registrar movimiento
+        if (req.body.cantidad !== undefined && req.body.cantidad !== cantidadAnterior) {
+            const diferencia = req.body.cantidad - cantidadAnterior;
+            await Movement.create({
+                tipo_item: 'herramienta',
+                item_id: updatedTool._id,
+                tipo_item_ref: 'Tool',
+                nombre_item: updatedTool.nombre,
+                tipo_movimiento: diferencia > 0 ? 'entrada' : 'salida',
+                cantidad: Math.abs(diferencia),
+                cantidad_anterior: cantidadAnterior,
+                cantidad_nueva: updatedTool.cantidad,
+                motivo: 'Actualización manual',
+                usuario: 'Sistema'
+            });
         }
 
-        const nuevaCantidad = tipo === 'entrada'
-            ? rows[0].cantidad + cantidad
-            : rows[0].cantidad - cantidad;
-
-        if (nuevaCantidad < 0) {
-            return res.status(400).json({ success: false, message: 'Cantidad insuficiente' });
-        }
-
-        await db.query('UPDATE herramientas SET cantidad = ? WHERE nombre = ?', [nuevaCantidad, nombre]);
-
-        res.json({ success: true, message: 'Cantidad actualizada correctamente', nuevaCantidad });
+        res.json({
+            success: true,
+            message: 'Herramienta actualizada exitosamente',
+            data: updatedTool
+        });
     } catch (error) {
-        console.error('Error al actualizar cantidad:', error);
-        res.status(500).json({ success: false, message: 'Error al actualizar cantidad' });
+        res.status(400).json({
+            success: false,
+            message: 'Error al actualizar la herramienta',
+            error: error.message
+        });
     }
 };
 
 // Eliminar herramienta
-exports.deleteTool = async (req, res) => {
+exports.delete = async (req, res) => {
     try {
-        const [result] = await db.query('DELETE FROM herramientas WHERE id = ?', [req.params.id]);
+        const tool = await Tool.findByIdAndDelete(req.params.id);
 
-        if (result.affectedRows === 0) {
-            return res.status(404).json({ success: false, message: 'Herramienta no encontrada' });
+        if (!tool) {
+            return res.status(404).json({
+                success: false,
+                message: 'Herramienta no encontrada'
+            });
         }
 
-        res.json({ success: true, message: 'Herramienta eliminada correctamente' });
+        res.json({
+            success: true,
+            message: 'Herramienta eliminada exitosamente'
+        });
     } catch (error) {
-        console.error('Error al eliminar herramienta:', error);
-        res.status(500).json({ success: false, message: 'Error al eliminar herramienta' });
+        res.status(500).json({
+            success: false,
+            message: 'Error al eliminar la herramienta',
+            error: error.message
+        });
     }
 };
 
-// Obtener conteo por ubicación
-exports.getLocationCounts = async (req, res) => {
+// Obtener herramientas que necesitan mantenimiento
+exports.getNeedsMaintenance = async (req, res) => {
     try {
-        const [rows] = await db.query(`
-            SELECT 
-                ubicacion,
-                COUNT(*) as count
-            FROM herramientas
-            GROUP BY ubicacion
-        `);
+        const tools = await Tool.find({
+            proximo_mantenimiento: { $lte: new Date() }
+        }).sort({ proximo_mantenimiento: 1 });
 
-        const counts = {
-            todas: 0,
-            bodega: 0,
-            taller: 0,
-            pañol: 0
-        };
-
-        rows.forEach(row => {
-            counts[row.ubicacion] = row.count;
-            counts.todas += row.count;
+        res.json({
+            success: true,
+            data: tools
         });
-
-        res.json({ success: true, data: counts });
     } catch (error) {
-        console.error('Error al obtener conteos:', error);
-        res.status(500).json({ success: false, message: 'Error al obtener conteos' });
+        res.status(500).json({
+            success: false,
+            message: 'Error al obtener herramientas que necesitan mantenimiento',
+            error: error.message
+        });
+    }
+};
+
+// Buscar herramientas
+exports.search = async (req, res) => {
+    try {
+        const { query } = req.query;
+
+        if (!query) {
+            return res.status(400).json({
+                success: false,
+                message: 'Debe proporcionar un término de búsqueda'
+            });
+        }
+
+        const tools = await Tool.find({
+            $or: [
+                { nombre: { $regex: query, $options: 'i' } },
+                { tipo: { $regex: query, $options: 'i' } },
+                { estado: { $regex: query, $options: 'i' } }
+            ]
+        }).sort({ nombre: 1 });
+
+        res.json({
+            success: true,
+            data: tools
+        });
+    } catch (error) {
+        res.status(500).json({
+            success: false,
+            message: 'Error al buscar herramientas',
+            error: error.message
+        });
     }
 };

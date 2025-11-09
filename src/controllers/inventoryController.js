@@ -1,113 +1,206 @@
-const db = require('../config/database');
+const Inventory = require('../models/Inventory');
+const Movement = require('../models/Movement');
 
-// Obtener todos los insumos
-exports.getAllInventory = async (req, res) => {
+// Obtener todos los items del inventario
+exports.getAll = async (req, res) => {
     try {
-        const [rows] = await db.query('SELECT * FROM insumos ORDER BY nombre');
-        res.json({ success: true, data: rows });
+        const items = await Inventory.find().sort({ nombre: 1 });
+        res.json({
+            success: true,
+            data: items
+        });
     } catch (error) {
-        console.error('Error al obtener insumos:', error);
-        res.status(500).json({ success: false, message: 'Error al obtener insumos' });
+        res.status(500).json({
+            success: false,
+            message: 'Error al obtener el inventario',
+            error: error.message
+        });
     }
 };
 
-// Obtener un insumo por ID
-exports.getInventoryById = async (req, res) => {
+// Obtener un item por ID
+exports.getById = async (req, res) => {
     try {
-        const [rows] = await db.query('SELECT * FROM insumos WHERE id = ?', [req.params.id]);
-        if (rows.length === 0) {
-            return res.status(404).json({ success: false, message: 'Insumo no encontrado' });
-        }
-        res.json({ success: true, data: rows[0] });
-    } catch (error) {
-        console.error('Error al obtener insumo:', error);
-        res.status(500).json({ success: false, message: 'Error al obtener insumo' });
-    }
-};
+        const item = await Inventory.findById(req.params.id);
 
-// Crear o actualizar insumo
-exports.createOrUpdateInventory = async (req, res) => {
-    try {
-        const { nombre, cantidad, unidad, stock_minimo } = req.body;
-
-        if (!nombre || cantidad === undefined || !unidad || stock_minimo === undefined) {
-            return res.status(400).json({
+        if (!item) {
+            return res.status(404).json({
                 success: false,
-                message: 'Todos los campos son requeridos'
+                message: 'Item no encontrado'
             });
         }
 
-        // Verificar si ya existe
-        const [existing] = await db.query('SELECT id FROM insumos WHERE nombre = ?', [nombre]);
-
-        if (existing.length > 0) {
-            // Actualizar
-            await db.query(
-                'UPDATE insumos SET cantidad = ?, unidad = ?, stock_minimo = ? WHERE nombre = ?',
-                [cantidad, unidad, stock_minimo, nombre]
-            );
-            res.json({ success: true, message: 'Insumo actualizado correctamente', id: existing[0].id });
-        } else {
-            // Crear nuevo
-            const [result] = await db.query(
-                'INSERT INTO insumos (nombre, cantidad, unidad, stock_minimo) VALUES (?, ?, ?, ?)',
-                [nombre, cantidad, unidad, stock_minimo]
-            );
-            res.status(201).json({ success: true, message: 'Insumo creado correctamente', id: result.insertId });
-        }
+        res.json({
+            success: true,
+            data: item
+        });
     } catch (error) {
-        console.error('Error al crear/actualizar insumo:', error);
-        res.status(500).json({ success: false, message: 'Error al crear/actualizar insumo' });
+        res.status(500).json({
+            success: false,
+            message: 'Error al obtener el item',
+            error: error.message
+        });
     }
 };
 
-// Actualizar cantidad de insumo
-exports.updateInventoryQuantity = async (req, res) => {
+// Crear nuevo item
+exports.create = async (req, res) => {
     try {
-        const { nombre, cantidad, tipo } = req.body;
+        const newItem = new Inventory(req.body);
+        const savedItem = await newItem.save();
 
-        if (!nombre || cantidad === undefined || !tipo) {
-            return res.status(400).json({
+        // Registrar movimiento
+        await Movement.create({
+            tipo_item: 'inventario',
+            item_id: savedItem._id,
+            tipo_item_ref: 'Inventory',
+            nombre_item: savedItem.nombre,
+            tipo_movimiento: 'entrada',
+            cantidad: savedItem.cantidad,
+            cantidad_anterior: 0,
+            cantidad_nueva: savedItem.cantidad,
+            motivo: 'Creación inicial',
+            usuario: 'Sistema'
+        });
+
+        res.status(201).json({
+            success: true,
+            message: 'Item creado exitosamente',
+            data: savedItem
+        });
+    } catch (error) {
+        res.status(400).json({
+            success: false,
+            message: 'Error al crear el item',
+            error: error.message
+        });
+    }
+};
+
+// Actualizar item
+exports.update = async (req, res) => {
+    try {
+        const item = await Inventory.findById(req.params.id);
+
+        if (!item) {
+            return res.status(404).json({
                 success: false,
-                message: 'Nombre, cantidad y tipo son requeridos'
+                message: 'Item no encontrado'
             });
         }
 
-        const [rows] = await db.query('SELECT cantidad FROM insumos WHERE nombre = ?', [nombre]);
+        const cantidadAnterior = item.cantidad;
+        const updatedItem = await Inventory.findByIdAndUpdate(
+            req.params.id,
+            req.body,
+            { new: true, runValidators: true }
+        );
 
-        if (rows.length === 0) {
-            return res.status(404).json({ success: false, message: 'Insumo no encontrado' });
+        // Si cambió la cantidad, registrar movimiento
+        if (req.body.cantidad !== undefined && req.body.cantidad !== cantidadAnterior) {
+            const diferencia = req.body.cantidad - cantidadAnterior;
+            await Movement.create({
+                tipo_item: 'inventario',
+                item_id: updatedItem._id,
+                tipo_item_ref: 'Inventory',
+                nombre_item: updatedItem.nombre,
+                tipo_movimiento: diferencia > 0 ? 'entrada' : 'salida',
+                cantidad: Math.abs(diferencia),
+                cantidad_anterior: cantidadAnterior,
+                cantidad_nueva: updatedItem.cantidad,
+                motivo: 'Actualización manual',
+                usuario: 'Sistema'
+            });
         }
 
-        const nuevaCantidad = tipo === 'entrada'
-            ? rows[0].cantidad + cantidad
-            : rows[0].cantidad - cantidad;
-
-        if (nuevaCantidad < 0) {
-            return res.status(400).json({ success: false, message: 'Stock insuficiente' });
-        }
-
-        await db.query('UPDATE insumos SET cantidad = ? WHERE nombre = ?', [nuevaCantidad, nombre]);
-
-        res.json({ success: true, message: 'Cantidad actualizada correctamente', nuevaCantidad });
+        res.json({
+            success: true,
+            message: 'Item actualizado exitosamente',
+            data: updatedItem
+        });
     } catch (error) {
-        console.error('Error al actualizar cantidad:', error);
-        res.status(500).json({ success: false, message: 'Error al actualizar cantidad' });
+        res.status(400).json({
+            success: false,
+            message: 'Error al actualizar el item',
+            error: error.message
+        });
     }
 };
 
-// Eliminar insumo
-exports.deleteInventory = async (req, res) => {
+// Eliminar item
+exports.delete = async (req, res) => {
     try {
-        const [result] = await db.query('DELETE FROM insumos WHERE id = ?', [req.params.id]);
+        const item = await Inventory.findByIdAndDelete(req.params.id);
 
-        if (result.affectedRows === 0) {
-            return res.status(404).json({ success: false, message: 'Insumo no encontrado' });
+        if (!item) {
+            return res.status(404).json({
+                success: false,
+                message: 'Item no encontrado'
+            });
         }
 
-        res.json({ success: true, message: 'Insumo eliminado correctamente' });
+        res.json({
+            success: true,
+            message: 'Item eliminado exitosamente'
+        });
     } catch (error) {
-        console.error('Error al eliminar insumo:', error);
-        res.status(500).json({ success: false, message: 'Error al eliminar insumo' });
+        res.status(500).json({
+            success: false,
+            message: 'Error al eliminar el item',
+            error: error.message
+        });
+    }
+};
+
+// Obtener items con stock bajo
+exports.getLowStock = async (req, res) => {
+    try {
+        const items = await Inventory.find({
+            $expr: { $lte: ['$cantidad', '$stock_minimo'] }
+        }).sort({ nombre: 1 });
+
+        res.json({
+            success: true,
+            data: items
+        });
+    } catch (error) {
+        res.status(500).json({
+            success: false,
+            message: 'Error al obtener items con stock bajo',
+            error: error.message
+        });
+    }
+};
+
+// Buscar items
+exports.search = async (req, res) => {
+    try {
+        const { query } = req.query;
+
+        if (!query) {
+            return res.status(400).json({
+                success: false,
+                message: 'Debe proporcionar un término de búsqueda'
+            });
+        }
+
+        const items = await Inventory.find({
+            $or: [
+                { nombre: { $regex: query, $options: 'i' } },
+                { categoria: { $regex: query, $options: 'i' } },
+                { proveedor: { $regex: query, $options: 'i' } }
+            ]
+        }).sort({ nombre: 1 });
+
+        res.json({
+            success: true,
+            data: items
+        });
+    } catch (error) {
+        res.status(500).json({
+            success: false,
+            message: 'Error al buscar items',
+            error: error.message
+        });
     }
 };

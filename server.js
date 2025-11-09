@@ -2,6 +2,7 @@ require('dotenv').config();
 const express = require('express');
 const cors = require('cors');
 const path = require('path');
+const connectDB = require('./src/config/database');
 
 // Importar rutas
 const inventoryRoutes = require('./src/routes/inventoryRoutes');
@@ -10,6 +11,9 @@ const movementsRoutes = require('./src/routes/movementsRoutes');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
+
+// Conectar a MongoDB
+connectDB();
 
 // Middlewares
 app.use(cors());
@@ -29,6 +33,15 @@ app.get('/', (req, res) => {
     res.sendFile(path.join(__dirname, 'public', 'index.html'));
 });
 
+// Ruta de health check
+app.get('/api/health', (req, res) => {
+    res.json({
+        success: true,
+        message: 'API funcionando correctamente',
+        database: 'MongoDB conectado'
+    });
+});
+
 // Manejo de errores
 app.use((err, req, res, next) => {
     console.error(err.stack);
@@ -39,8 +52,16 @@ app.use((err, req, res, next) => {
     });
 });
 
+// Manejo de rutas no encontradas
+app.use((req, res) => {
+    res.status(404).json({
+        success: false,
+        message: 'Ruta no encontrada'
+    });
+});
+
 // Iniciar servidor
 app.listen(PORT, () => {
     console.log(`🚀 Servidor corriendo en http://localhost:${PORT}`);
-    console.log(`📊 Base de datos: ${process.env.DB_NAME}`);
+    console.log(`📊 Usando MongoDB`);
 });

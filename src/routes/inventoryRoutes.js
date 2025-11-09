@@ -2,19 +2,13 @@ const express = require('express');
 const router = express.Router();
 const inventoryController = require('../controllers/inventoryController');
 
-// GET /api/inventory - Obtener todos los insumos
-router.get('/', inventoryController.getAllInventory);
-
-// GET /api/inventory/:id - Obtener un insumo específico
-router.get('/:id', inventoryController.getInventoryById);
-
-// POST /api/inventory - Crear o actualizar insumo
-router.post('/', inventoryController.createOrUpdateInventory);
-
-// PUT /api/inventory/quantity - Actualizar cantidad
-router.put('/quantity', inventoryController.updateInventoryQuantity);
-
-// DELETE /api/inventory/:id - Eliminar insumo
-router.delete('/:id', inventoryController.deleteInventory);
+// Rutas de inventario
+router.get('/', inventoryController.getAll);
+router.get('/low-stock', inventoryController.getLowStock);
+router.get('/search', inventoryController.search);
+router.get('/:id', inventoryController.getById);
+router.post('/', inventoryController.create);
+router.put('/:id', inventoryController.update);
+router.delete('/:id', inventoryController.delete);
 
 module.exports = router;

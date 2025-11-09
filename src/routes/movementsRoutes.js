@@ -2,13 +2,10 @@ const express = require('express');
 const router = express.Router();
 const movementsController = require('../controllers/movementsController');
 
-// GET /api/movements - Obtener todos los movimientos (con filtro opcional por tipo)
-router.get('/', movementsController.getAllMovements);
-
-// POST /api/movements/inventory - Crear movimiento de insumo
-router.post('/inventory', movementsController.createInventoryMovement);
-
-// POST /api/movements/tool - Crear movimiento de herramienta
-router.post('/tool', movementsController.createToolMovement);
+// Rutas de movimientos
+router.get('/', movementsController.getAll);
+router.get('/stats', movementsController.getStats);
+router.get('/item/:itemId', movementsController.getByItem);
+router.post('/', movementsController.create);
 
 module.exports = router;

@@ -1,28 +1,37 @@
-const mysql = require('mysql2');
+const mongoose = require('mongoose');
 
-// Crear pool de conexiones
-const pool = mysql.createPool({
-    host: process.env.DB_HOST || 'localhost',
-    user: process.env.DB_USER || 'root',
-    password: process.env.DB_PASSWORD || '',
-    database: process.env.DB_NAME || 'gestion_cocina',
-    port: process.env.DB_PORT || 3306,
-    waitForConnections: true,
-    connectionLimit: 10,
-    queueLimit: 0
-});
-
-// Usar promesas en lugar de callbacks
-const promisePool = pool.promise();
-
-// Verificar conexión
-pool.getConnection((err, connection) => {
-    if (err) {
-        console.error('❌ Error conectando a la base de datos:', err.message);
-        return;
+const connectDB = async () => {
+    try {
+        await mongoose.connect(process.env.MONGODB_URI, {
+            useNewUrlParser: true,
+            useUnifiedTopology: true,
+        });
+        console.log('✅ MongoDB conectado exitosamente');
+        console.log(`📊 Base de datos: ${mongoose.connection.name}`);
+    } catch (error) {
+        console.error('❌ Error al conectar a MongoDB:', error.message);
+        process.exit(1);
     }
-    console.log('✅ Conexión exitosa a MySQL');
-    connection.release();
+};
+
+// Eventos de conexión
+mongoose.connection.on('connected', () => {
+    console.log('🔗 Mongoose conectado a MongoDB');
 });
 
-module.exports = promisePool;
+mongoose.connection.on('error', (err) => {
+    console.error('❌ Error de conexión de Mongoose:', err);
+});
+
+mongoose.connection.on('disconnected', () => {
+    console.log('🔌 Mongoose desconectado de MongoDB');
+});
+
+// Cerrar conexión cuando se cierra la aplicación
+process.on('SIGINT', async () => {
+    await mongoose.connection.close();
+    console.log('🔒 Conexión de MongoDB cerrada debido a la terminación de la aplicación');
+    process.exit(0);
+});
+
+module.exports = connectDB;
