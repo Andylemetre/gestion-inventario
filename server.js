@@ -10,7 +10,6 @@ const toolsRoutes = require('./src/routes/toolsRoutes');
 const movementsRoutes = require('./src/routes/movementsRoutes');
 
 const app = express();
-const PORT = process.env.PORT || 3000;
 
 // Middlewares
 app.use(cors());
@@ -20,13 +19,14 @@ app.use(express.urlencoded({ extended: true }));
 // Servir archivos estáticos
 app.use(express.static(path.join(__dirname, 'public')));
 
-// Conectar a MongoDB antes de cada request (importante para Vercel)
+// Conectar a MongoDB antes de cada request (crítico para Vercel serverless)
 app.use(async (req, res, next) => {
     try {
         await connectDB();
         next();
     } catch (error) {
         console.error('Error conectando a DB:', error);
+        // Continuar aunque falle la conexión
         next();
     }
 });
@@ -38,12 +38,26 @@ app.use('/api/movements', movementsRoutes);
 
 // Ruta principal
 app.get('/', (req, res) => {
-    res.sendFile(path.join(__dirname, 'public', 'index.html'));
+    try {
+        res.sendFile(path.join(__dirname, 'public', 'index.html'));
+    } catch (error) {
+        res.json({
+            success: true,
+            message: 'API de Gestión de Inventario de Cocina',
+            endpoints: {
+                health: '/api/health',
+                inventory: '/api/inventory',
+                tools: '/api/tools',
+                movements: '/api/movements'
+            }
+        });
+    }
 });
 
 // Ruta de health check
 app.get('/api/health', (req, res) => {
-    const dbStatus = require('mongoose').connection.readyState;
+    const mongoose = require('mongoose');
+    const dbStatus = mongoose.connection.readyState;
     const statusMap = {
         0: 'desconectado',
         1: 'conectado',
@@ -55,18 +69,23 @@ app.get('/api/health', (req, res) => {
         success: true,
         message: 'API funcionando correctamente',
         database: `MongoDB ${statusMap[dbStatus]}`,
+        gestion_cocina_MONGODB_URI: process.env.gestion_cocina_MONGODB_URI ? 'Configurada' : 'NO configurada',
         environment: process.env.NODE_ENV || 'development',
+        nodeVersion: process.version,
         timestamp: new Date().toISOString()
     });
 });
 
 // Manejo de errores
 app.use((err, req, res, next) => {
-    console.error(err.stack);
-    res.status(500).json({
+    console.error('Error:', err.message);
+    console.error('Stack:', err.stack);
+
+    res.status(err.status || 500).json({
         success: false,
         message: 'Error interno del servidor',
-        error: process.env.NODE_ENV === 'development' ? err.message : undefined
+        error: process.env.NODE_ENV === 'development' ? err.message : 'Error en el servidor',
+        path: req.path
     });
 });
 
@@ -74,19 +93,27 @@ app.use((err, req, res, next) => {
 app.use((req, res) => {
     res.status(404).json({
         success: false,
-        message: 'Ruta no encontrada'
+        message: 'Ruta no encontrada',
+        path: req.path,
+        method: req.method
     });
 });
 
-// Solo iniciar servidor si no está en Vercel
-if (process.env.NODE_ENV !== 'production') {
+// Para desarrollo local
+if (require.main === module) {
+    const PORT = process.env.PORT || 3000;
+
     connectDB().then(() => {
         app.listen(PORT, () => {
             console.log(`🚀 Servidor corriendo en http://localhost:${PORT}`);
             console.log(`📊 Usando MongoDB`);
+            console.log(`🌍 Modo: ${process.env.NODE_ENV || 'development'}`);
         });
+    }).catch(err => {
+        console.error('Error al iniciar servidor:', err);
+        process.exit(1);
     });
 }
 
-// Exportar para Vercel
+// Exportar para Vercel (CRÍTICO)
 module.exports = app;

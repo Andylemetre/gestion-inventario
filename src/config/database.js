@@ -11,7 +11,7 @@ const connectDB = async () => {
     }
 
     // Verificar que existe la URI
-    if (!process.env.MONGODB_URI) {
+    if (!process.env.gestion_cocina_MONGODB_URI) {
         console.error('❌ MONGODB_URI no está definida en las variables de entorno');
         return;
     }
