@@ -12,9 +12,6 @@ const movementsRoutes = require('./src/routes/movementsRoutes');
 const app = express();
 const PORT = process.env.PORT || 3000;
 
-// Conectar a MongoDB
-connectDB();
-
 // Middlewares
 app.use(cors());
 app.use(express.json());
@@ -22,6 +19,17 @@ app.use(express.urlencoded({ extended: true }));
 
 // Servir archivos estáticos
 app.use(express.static(path.join(__dirname, 'public')));
+
+// Conectar a MongoDB antes de cada request (importante para Vercel)
+app.use(async (req, res, next) => {
+    try {
+        await connectDB();
+        next();
+    } catch (error) {
+        console.error('Error conectando a DB:', error);
+        next();
+    }
+});
 
 // Rutas API
 app.use('/api/inventory', inventoryRoutes);
@@ -35,10 +43,20 @@ app.get('/', (req, res) => {
 
 // Ruta de health check
 app.get('/api/health', (req, res) => {
+    const dbStatus = require('mongoose').connection.readyState;
+    const statusMap = {
+        0: 'desconectado',
+        1: 'conectado',
+        2: 'conectando',
+        3: 'desconectando'
+    };
+
     res.json({
         success: true,
         message: 'API funcionando correctamente',
-        database: 'MongoDB conectado'
+        database: `MongoDB ${statusMap[dbStatus]}`,
+        environment: process.env.NODE_ENV || 'development',
+        timestamp: new Date().toISOString()
     });
 });
 
@@ -60,8 +78,15 @@ app.use((req, res) => {
     });
 });
 
-// Iniciar servidor
-app.listen(PORT, () => {
-    console.log(`🚀 Servidor corriendo en http://localhost:${PORT}`);
-    console.log(`📊 Usando MongoDB`);
-});
+// Solo iniciar servidor si no está en Vercel
+if (process.env.NODE_ENV !== 'production') {
+    connectDB().then(() => {
+        app.listen(PORT, () => {
+            console.log(`🚀 Servidor corriendo en http://localhost:${PORT}`);
+            console.log(`📊 Usando MongoDB`);
+        });
+    });
+}
+
+// Exportar para Vercel
+module.exports = app;
